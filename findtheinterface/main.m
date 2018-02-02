@@ -8,31 +8,52 @@
 
 #import <Foundation/Foundation.h>
 NSArray* findInterface (NSString* text);
+
+BOOL bFormat;
+
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
         // insert code here...
         if(argc<=1) return 0;
-        NSString* filePath = [[NSString alloc] initWithCString:argv[1] encoding:NSUTF8StringEncoding];
-//        NSLog(@"%@",filePath);
+        NSString* cmd = [[NSString alloc] initWithCString:argv[1] encoding:NSUTF8StringEncoding];
+        if ([cmd isEqualToString:@"-f"]) {
+            bFormat = YES;
+        }
+        NSInteger i = bFormat ? 2 : 1;
+        NSString* filePath = [[NSString alloc] initWithCString:argv[i] encoding:NSUTF8StringEncoding];
         if(![[NSFileManager defaultManager] fileExistsAtPath:filePath])
         {
             NSLog(@"文件不存在");
             return 0;
         }
         NSString* s = [[NSString alloc] initWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
-        NSString* f = [[findInterface(s) componentsJoinedByString:@";\n"] stringByAppendingString:@";"];
-        NSLog(@"result:\n%@",f);
+        NSString* f = [findInterface(s) componentsJoinedByString:@"\n"];
+        NSLog(@"%@",f);
     }
     return 0;
 }
 
+NSString* format (NSString* string){
+    @autoreleasepool {
+        string = [string stringByReplacingOccurrencesOfString:@"\n" withString:@""];
+        string = [string stringByReplacingOccurrencesOfString:@";" withString:@""];
+        string = [string stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        NSArray *components = [string componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        
+        components = [components filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self <> ''"]];
+        
+        string = [components componentsJoinedByString:@" "];
+        return string;
+    }
+}
 
 NSArray* findInterface (NSString* text)
 {
     @autoreleasepool {
         //复制代码
-//        NSString *regex = @"-\\s?\\(.*?\\).*?(?=\\n|$|\\{)";
+        //        NSString *regex = @"-\\s?\\(.*?\\).*?(?=\\n|$|\\{)";
         NSString *regex = @"(-|\\+)\\s?\\(.*?\\).*?(?=\\{)";
+        regex = @"(-|\\+)\\s?\\(.*?\\)[^;]*?(?=\\{)";
         NSString *str = text;
         NSError *error;
         NSRegularExpression *regular = [NSRegularExpression regularExpressionWithPattern:regex
@@ -48,9 +69,13 @@ NSArray* findInterface (NSString* text)
         for (NSTextCheckingResult *match in matches) {
             NSRange range = [match range];
             NSString *mStr = [str substringWithRange:range];
+            if (bFormat) {
+                mStr = format(mStr); //这个方法在下面的内容zh
+            }
             [result addObject:mStr];
         }
         
         return [result copy];
     }
 }
+
